@@ -1,4 +1,11 @@
-import type { ProviderSearchOptions, SearchProvider, SearchResult } from "../types.js";
+import type {
+  ProviderSearchOptions,
+  ReadProvider,
+  ReadProviderOptions,
+  ReadResult,
+  SearchProvider,
+  SearchResult,
+} from "../types.js";
 import { asArray, asRecord, asString, requestJson } from "./http.js";
 
 interface FirecrawlResponse {
@@ -6,7 +13,11 @@ interface FirecrawlResponse {
   web?: unknown;
 }
 
-export class FirecrawlProvider implements SearchProvider {
+interface FirecrawlScrapeResponse {
+  data?: unknown;
+}
+
+export class FirecrawlProvider implements SearchProvider, ReadProvider {
   readonly name = "firecrawl" as const;
 
   constructor(private readonly apiKey: string) {}
@@ -34,7 +45,28 @@ export class FirecrawlProvider implements SearchProvider {
     });
   }
 
-  async fetch(url: string): Promise<string> {
-    throw new Error(`firecrawl fetch is not implemented yet: ${url}`);
+  async read(url: string, options: ReadProviderOptions): Promise<ReadResult> {
+    const data = await requestJson<FirecrawlScrapeResponse>(
+      "https://api.firecrawl.dev/v2/scrape",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${this.apiKey}` },
+        body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+        signal: options.signal,
+      },
+    );
+    const result = asRecord(data.data);
+    const content = asString(result?.markdown);
+    if (!content) throw new Error(`firecrawl response missing data.markdown for ${url}`);
+
+    const metadata = asRecord(result?.metadata);
+    const title = asString(metadata?.title);
+    return {
+      title,
+      url: asString(metadata?.url) ?? url,
+      content: content.slice(0, options.maxCharacters),
+      provider: this.name,
+      kind: options.kind,
+    };
   }
 }

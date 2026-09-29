@@ -1,11 +1,20 @@
-import type { ProviderSearchOptions, SearchProvider, SearchResult } from "../types.js";
+import type {
+  ProviderSearchOptions,
+  ReadProvider,
+  ReadProviderOptions,
+  ReadResult,
+  SearchProvider,
+  SearchResult,
+} from "../types.js";
 import { asArray, asNumber, asRecord, asString, requestJson } from "./http.js";
 
 interface ExaResponse {
   results?: unknown;
 }
 
-export class ExaProvider implements SearchProvider {
+interface ExaContentsResponse extends ExaResponse {}
+
+export class ExaProvider implements SearchProvider, ReadProvider {
   readonly name = "exa" as const;
 
   constructor(private readonly apiKey: string) {}
@@ -40,7 +49,28 @@ export class ExaProvider implements SearchProvider {
     });
   }
 
-  async fetch(url: string): Promise<string> {
-    throw new Error(`exa fetch is not implemented yet: ${url}`);
+  async read(url: string, options: ReadProviderOptions): Promise<ReadResult> {
+    const data = await requestJson<ExaContentsResponse>(
+      "https://api.exa.ai/contents",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": this.apiKey },
+        body: JSON.stringify({ urls: [url], text: { maxCharacters: options.maxCharacters } }),
+        signal: options.signal,
+      },
+    );
+    const result = asRecord(asArray(data.results)[0]);
+    const content = asString(result?.text);
+    if (!content) throw new Error(`exa response missing results[0].text for ${url}`);
+
+    const title = asString(result?.title);
+    const resultUrl = asString(result?.url) ?? url;
+    return {
+      title,
+      url: resultUrl,
+      content,
+      provider: this.name,
+      kind: options.kind,
+    };
   }
 }

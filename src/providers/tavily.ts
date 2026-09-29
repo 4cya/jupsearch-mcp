@@ -40,7 +40,4 @@ export class TavilyProvider implements SearchProvider {
     });
   }
 
-  async fetch(url: string): Promise<string> {
-    throw new Error(`tavily fetch is not implemented yet: ${url}`);
-  }
 }

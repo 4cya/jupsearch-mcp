@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createProviders } from "../providers/index.js";
+import { createProviders, createReadProviders } from "../providers/index.js";
 
 const keys = ["EXA_API_KEY", "SERPER_API_KEY", "TAVILY_API_KEY", "FIRECRAWL_API_KEY", "JINA_API_KEY"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
@@ -26,5 +26,20 @@ describe("createProviders", () => {
       { name: "serper", configured: true },
       { name: "tavily", configured: false },
     ]);
+  });
+});
+
+describe("createReadProviders", () => {
+  it("keeps the read chain independent from the search chain", () => {
+    process.env.SEARCH_PROVIDERS = "serper,tavily";
+    process.env.READ_PROVIDERS = "firecrawl,exa,jina";
+    process.env.FIRECRAWL_API_KEY = "";
+    process.env.EXA_API_KEY = "exa-test-key";
+    process.env.JINA_API_KEY = "";
+
+    const { providers, status } = createReadProviders();
+
+    expect(providers.map((provider) => provider.name)).toEqual(["exa"]);
+    expect(status.map((item) => item.name)).toEqual(["firecrawl", "exa", "jina"]);
   });
 });

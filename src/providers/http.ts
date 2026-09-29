@@ -3,6 +3,20 @@ export async function requestJson<T>(
   init: RequestInit,
   timeoutMs = 15_000,
 ): Promise<T> {
+  const response = await request(url, init, timeoutMs);
+  return (await response.json()) as T;
+}
+
+export async function requestText(
+  url: string,
+  init: RequestInit,
+  timeoutMs = 15_000,
+): Promise<string> {
+  const response = await request(url, init, timeoutMs);
+  return response.text();
+}
+
+async function request(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const signal = init.signal
@@ -15,7 +29,7 @@ export async function requestJson<T>(
       const body = await response.text();
       throw new Error(`HTTP ${response.status}: ${body.slice(0, 300)}`);
     }
-    return (await response.json()) as T;
+    return response;
   } finally {
     clearTimeout(timer);
   }
