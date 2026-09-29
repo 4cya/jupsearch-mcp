@@ -30,6 +30,11 @@ export function readApiKey(provider: ProviderName): string | undefined {
   return key || undefined;
 }
 
+export function readHost(value = process.env.HOST): string {
+  const host = value?.trim();
+  return host || "127.0.0.1";
+}
+
 export function readPort(value = process.env.PORT): number {
   const port = Number(value ?? 8790);
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
