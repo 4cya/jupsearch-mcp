@@ -31,7 +31,4 @@ export class SerperProvider implements SearchProvider {
     });
   }
 
-  async fetch(url: string): Promise<string> {
-    throw new Error(`serper fetch is not implemented yet: ${url}`);
-  }
 }
