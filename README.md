@@ -15,6 +15,24 @@ cp .env.example .env
 
 `SEARCH_PROVIDERS` 决定搜索渠道顺序，`READ_PROVIDERS` 决定网页/PDF 读取渠道顺序。未设置 key 的渠道会被跳过，单个渠道失败不会影响其他渠道。
 
+`HOST` 默认 `127.0.0.1`，`PORT` 默认 `8790`。
+
+### 访问鉴权
+
+`/mcp` 要求固定 token。token 放在 `MCP_AUTH_TOKEN`（部署环境里由 systemd 的 `EnvironmentFile` 提供），明文留存在服务器的 `.mcp-token`（权限 600）。**未配置 `MCP_AUTH_TOKEN` 时 `/mcp` 一律返回 503**，不会退回无鉴权模式。
+
+客户端两种携带方式（二选一，推荐第一种）：
+
+```text
+X-MCP-Token: <token>
+```
+
+```text
+Authorization: Bearer <token>
+```
+
+`GET /health` 不需要 token，只返回渠道名与 `configured` 布尔值，不含任何凭据。
+
 ## 本地运行
 
 ```bash
@@ -37,6 +55,31 @@ Streamable HTTP 地址：
 
 ```text
 http://127.0.0.1:8790/mcp
+```
+
+MCP 客户端配置（HTTP 传输，带鉴权头）：
+
+```json
+{
+  "mcpServers": {
+    "jupsearch": {
+      "type": "http",
+      "url": "https://search.711255.xyz/mcp",
+      "headers": { "X-MCP-Token": "<token>" }
+    }
+  }
+}
+```
+
+用 `curl` 直接验证：
+
+```bash
+TOKEN=$(cat /opt/jupsearch-mcp/.mcp-token)
+curl -sS -X POST https://search.711255.xyz/mcp \
+  -H "X-MCP-Token: $TOKEN" \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
 `web_search` 参数：
